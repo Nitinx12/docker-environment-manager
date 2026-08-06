@@ -1,0 +1,24 @@
+{
+  "name": "docker-env-manager",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  // Gives the container access to the host's Docker engine, so scripts
+  // that call `docker` / `docker compose` work exactly as they would
+  // on your host — this is the "Docker-in-Docker" feature.
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+    "ghcr.io/devcontainers/features/powershell:2.0.2": {}
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "timonwong.shellcheck",
+        "ms-vscode.powershell",
+        "ms-azuretools.vscode-docker"
+      ]
+    }
+  },
+  "remoteUser": "vscode"
+}

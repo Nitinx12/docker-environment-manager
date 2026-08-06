@@ -1,0 +1,12 @@
+# Placeholder compose file — replace services with your real stack.
+# Kept minimal so start.sh / health checks can be tested end-to-end immediately.
+services:
+  demo:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
