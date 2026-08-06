@@ -13,6 +13,9 @@ echo "Verifying toolchain:"
 docker --version
 docker compose version
 shellcheck --version | head -2
+# SC2016: single quotes are intentional here — $PSVersionTable must be
+# expanded by pwsh, not by bash.
+# shellcheck disable=SC2016
 pwsh -NoLogo -NoProfile -Command '$PSVersionTable.PSVersion'
 
 echo ""
