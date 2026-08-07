@@ -14,7 +14,7 @@ $ScriptDir = $PSScriptRoot
 . (Join-Path $ScriptDir 'lib/common.ps1')
 
 function Show-Usage {
-    @"
+@"
 Usage: logs.ps1 [OPTIONS] [SERVICE]
 
 View logs for the Docker Compose stack.
@@ -29,69 +29,176 @@ Options:
 "@ | Write-Host
 }
 
-# ---- Load config, then apply CLI overrides ------------------------------
+# ---- Load config ---------------------------------------------------------
+
 load_env
 
 $ComposeFile = 'docker/docker-compose.yml'
-if ($global:COMPOSE_FILE) { $ComposeFile = $global:COMPOSE_FILE }
+if ($global:COMPOSE_FILE) {
+    $ComposeFile = $global:COMPOSE_FILE
+}
 
 $ProjectName = 'docker-env-manager'
-if ($global:PROJECT_NAME) { $ProjectName = $global:PROJECT_NAME }
+if ($global:PROJECT_NAME) {
+    $ProjectName = $global:PROJECT_NAME
+}
 
 $Service = ''
 $TailLines = '100'
 $FollowFlag = $false
 
+# ---- Parse arguments -----------------------------------------------------
+
 $i = 0
 while ($i -lt $args.Count) {
     $arg = $args[$i]
-    if ($arg -eq '-f' -or $arg -eq '--file') {
-        if ($i + 1 -ge $args.Count) { log_error "Missing value for $arg"; exit 1 }
-        $ComposeFile = $args[$i + 1]; $i += 2
-    }
-    elseif ($arg -eq '-p' -or $arg -eq '--project') {
-        if ($i + 1 -ge $args.Count) { log_error "Missing value for $arg"; exit 1 }
-        $ProjectName = $args[$i + 1]; $i += 2
-    }
-    elseif ($arg -eq '-s' -or $arg -eq '--service') {
-        if ($i + 1 -ge $args.Count) { log_error "Missing value for $arg"; exit 1 }
-        $Service = $args[$i + 1]; $i += 2
-    }
-    elseif ($arg -eq '--follow') {
-        $FollowFlag = $true; $i += 1
-    }
-    elseif ($arg -eq '-n' -or $arg -eq '--tail') {
-        if ($i + 1 -ge $args.Count) { log_error "Missing value for $arg"; exit 1 }
-        $TailLines = $args[$i + 1]; $i += 2
-    }
-    elseif ($arg -eq '-h' -or $arg -eq '--help') {
-        Show-Usage; exit 0
-    }
-    else {
-        # Allow a bare positional service name too: .\logs.ps1 airflow-scheduler
-        $Service = $arg; $i += 1
+
+    switch ($arg) {
+        '-f' {
+            if ($i + 1 -ge $args.Count) {
+                log_error "Missing value for $arg"
+                exit 1
+            }
+            $ComposeFile = $args[$i + 1]
+            $i += 2
+            continue
+        }
+
+        '--file' {
+            if ($i + 1 -ge $args.Count) {
+                log_error "Missing value for $arg"
+                exit 1
+            }
+            $ComposeFile = $args[$i + 1]
+            $i += 2
+            continue
+        }
+
+        '-p' {
+            if ($i + 1 -ge $args.Count) {
+                log_error "Missing value for $arg"
+                exit 1
+            }
+            $ProjectName = $args[$i + 1]
+            $i += 2
+            continue
+        }
+
+        '--project' {
+            if ($i + 1 -ge $args.Count) {
+                log_error "Missing value for $arg"
+                exit 1
+            }
+            $ProjectName = $args[$i + 1]
+            $i += 2
+            continue
+        }
+
+        '-s' {
+            if ($i + 1 -ge $args.Count) {
+                log_error "Missing value for $arg"
+                exit 1
+            }
+            $Service = $args[$i + 1]
+            $i += 2
+            continue
+        }
+
+        '--service' {
+            if ($i + 1 -ge $args.Count) {
+                log_error "Missing value for $arg"
+                exit 1
+            }
+            $Service = $args[$i + 1]
+            $i += 2
+            continue
+        }
+
+        '--follow' {
+            $FollowFlag = $true
+            $i++
+            continue
+        }
+
+        '-n' {
+            if ($i + 1 -ge $args.Count) {
+                log_error "Missing value for $arg"
+                exit 1
+            }
+            $TailLines = $args[$i + 1]
+            $i += 2
+            continue
+        }
+
+        '--tail' {
+            if ($i + 1 -ge $args.Count) {
+                log_error "Missing value for $arg"
+                exit 1
+            }
+            $TailLines = $args[$i + 1]
+            $i += 2
+            continue
+        }
+
+        '-h' {
+            Show-Usage
+            exit 0
+        }
+
+        '--help' {
+            Show-Usage
+            exit 0
+        }
+
+        default {
+            # Treat a bare argument as the service name.
+            $Service = $arg
+            $i++
+        }
     }
 }
 
-# Resolve compose file relative to repo root if a relative path was given
+# ---- Resolve compose file ------------------------------------------------
+
 $ComposeFile = Resolve-UnderRepoRoot $ComposeFile
 
-# ---- Preflight checks ----------------------------------------------------
-require_docker
-require_command 'docker'
+# ---- Validate compose file BEFORE Docker checks --------------------------
 
 if (-not (Test-Path -LiteralPath $ComposeFile -PathType Leaf)) {
     log_error "Compose file not found: $ComposeFile"
     exit 1
 }
 
+# ---- Preflight checks ----------------------------------------------------
+
+require_docker
+require_command 'docker'
+
 $serviceSuffix = ''
-if ($Service) { $serviceSuffix = " (service: $Service)" }
+if ($Service) {
+    $serviceSuffix = " (service: $Service)"
+}
+
 log_info "Showing logs for '$ProjectName'$serviceSuffix"
 
-$composeArgs = @('compose', '-f', $ComposeFile, '-p', $ProjectName, 'logs', '--tail', $TailLines)
-if ($FollowFlag) { $composeArgs += '--follow' }
-if ($Service) { $composeArgs += $Service }
+$composeArgs = @(
+    'compose'
+    '-f'
+    $ComposeFile
+    '-p'
+    $ProjectName
+    'logs'
+    '--tail'
+    $TailLines
+)
+
+if ($FollowFlag) {
+    $composeArgs += '--follow'
+}
+
+if ($Service) {
+    $composeArgs += $Service
+}
 
 & docker @composeArgs
 exit $LASTEXITCODE
