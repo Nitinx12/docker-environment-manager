@@ -209,6 +209,7 @@ To rebuild the environment from scratch:
 | Doc | Covers |
 |---|---|
 | [`QUICKSTART.md`](QUICKSTART.md) | Fastest path to a running stack |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | System design, components, and data flow |
 | [`CLI_REFERENCE.md`](CLI_REFERENCE.md) | Every script, every flag, defaults, and examples |
 | [`README.md`](README.md) | Project overview |
 | [`docs/BASH.md`](docs/BASH.md) | Bash script usage, requirements, testing & linting |

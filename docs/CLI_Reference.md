@@ -261,6 +261,7 @@ Read from `.env` at the repo root (see [`INSTALLATION.md#configuration`](INSTALL
 | Doc | Covers |
 |---|---|
 | [`QUICKSTART.md`](QUICKSTART.md) | Fastest path to a running stack |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | System design, components, and data flow |
 | [`INSTALLATION.md`](INSTALLATION.md) | Full setup, requirements, and `.env` configuration |
 | [`docs/BASH.md`](docs/BASH.md) | Bash script usage, requirements, testing & linting |
 | [`docs/POWERSHELL.md`](docs/POWERSHELL.md) | PowerShell-specific usage and parity notes |

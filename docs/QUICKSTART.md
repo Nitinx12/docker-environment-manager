@@ -87,4 +87,5 @@ Every script accepts `-h` / `--help` for full options.
 - Adjust `PROJECT_NAME`, `COMPOSE_FILE`, and `HEALTH_TIMEOUT` in `.env` — see [`INSTALLATION.md`](INSTALLATION.md#configuration)
 - Full flag reference for every script: [`CLI_REFERENCE.md`](CLI_REFERENCE.md)
 - Running natively (no Dev Container)? See [`docs/BASH.md`](docs/BASH.md) for Linux/macOS/WSL, or [`docs/POWERSHELL.md`](docs/POWERSHELL.md) for Windows/PowerShell
+- Curious how the pieces fit together? See [`ARCHITECTURE.md`](ARCHITECTURE.md)
 - Run the test suite: `tests/bash/*.bats` (Bats) and `tests/powershell/*.Tests.ps1` (Pester)
