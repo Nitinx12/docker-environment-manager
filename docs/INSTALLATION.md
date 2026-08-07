@@ -109,18 +109,18 @@ Precedence for every setting is: **hardcoded default → `.env` value → CLI fl
 
 All scripts live in `scripts/bash/` (and their PowerShell equivalents in `scripts/powershell/`). Every script supports `-h` / `--help` for full usage.
 
-| Script | Purpose | Key flags |
-|---|---|---|
-| `start.sh` | Start the Compose stack | `-f/--file`, `-p/--project`, `-b/--build` |
-| `stop.sh` | Stop the Compose stack | `-f/--file`, `-p/--project`, `-v/--volumes` |
-| `restart.sh` | Stop then start | `-f/--file`, `-p/--project`, `-b/--build` |
-| `cleanup.sh` | Clean up Docker resources | `-f/--file`, `-p/--project` |
-| `logs.sh` | View/stream service logs | `-s/--service`, `--follow` |
-| `health.sh` | Check or wait for stack health | `-f/--file`, `-p/--project` |
-| `backup.sh` | Back up named volumes to `.tar.gz` | `-p/--project`, `-v/--volume` |
-| `restore.sh` | Restore a volume from a `.tar.gz` backup | `-v/--volume`, `-i/--input`, `-c/--clean`, `-y/--yes` |
+| Script | Purpose |
+|---|---|
+| `start.sh` | Start the Compose stack |
+| `stop.sh` | Stop the Compose stack |
+| `restart.sh` | Stop then start |
+| `cleanup.sh` | Clean up Docker resources |
+| `logs.sh` | View/stream service logs |
+| `health.sh` | Check or wait for stack health |
+| `backup.sh` | Back up named volumes to `.tar.gz` |
+| `restore.sh` | Restore a volume from a `.tar.gz` backup |
 
-For the PowerShell equivalents, flag names and behavior are identical — see [`docs/powershell.MD`](docs/powershell.MD).
+Full flag-by-flag documentation, defaults, and examples for every script (Bash and PowerShell): [`CLI_REFERENCE.md`](CLI_REFERENCE.md).
 
 ---
 
@@ -145,7 +145,7 @@ All four commands should return version info with no errors. Then confirm the pr
 
 ## Manual Installation (without Dev Containers)
 
-If you'd rather not use VS Code / Dev Containers, you can replicate the environment manually on Debian/Ubuntu:
+If you'd rather not use VS Code / Dev Containers, you can replicate the environment manually on Debian/Ubuntu. For Bash-specific version requirements and script details, see [`docs/BASH.md`](docs/BASH.md); for PowerShell, see [`docs/POWERSHELL.md`](docs/POWERSHELL.md).
 
 ```bash
 # System packages
@@ -200,7 +200,7 @@ To rebuild the environment from scratch:
 - **Tail logs:** `./scripts/bash/logs.sh --follow`
 - **Run the test suite:** Bash tests use [Bats](https://github.com/bats-core/bats-core) (`tests/bash/*.bats`); PowerShell tests use [Pester](https://pester.dev/) (`tests/powershell/*.Tests.ps1`)
 - **Set up backups:** `./scripts/bash/backup.sh` to snapshot named volumes on a schedule
-- Windows users working outside the Dev Container: see [`docs/powershell.MD`](docs/powershell.MD) for the PowerShell script equivalents
+- Windows users working outside the Dev Container: see [`docs/POWERSHELL.md`](docs/POWERSHELL.md) for the PowerShell script equivalents
 
 ---
 
@@ -208,8 +208,10 @@ To rebuild the environment from scratch:
 
 | Doc | Covers |
 |---|---|
+| [`QUICKSTART.md`](QUICKSTART.md) | Fastest path to a running stack |
+| [`CLI_REFERENCE.md`](CLI_REFERENCE.md) | Every script, every flag, defaults, and examples |
 | [`README.md`](README.md) | Project overview |
-| [`docs/powershell.MD`](docs/powershell.MD) | PowerShell script usage, parity notes with Bash, execution-policy fix |
+| [`docs/BASH.md`](docs/BASH.md) | Bash script usage, requirements, testing & linting |
+| [`docs/POWERSHELL.md`](docs/POWERSHELL.md) | PowerShell script usage, parity notes with Bash, execution-policy fix |
 | [Configuration](#configuration) (this doc) | `.env` variables and precedence rules |
-| [CLI Reference](#cli-reference) (this doc) | Every script and its key flags |
 | [`.github/workflows/`](.github/workflows) | CI (`tests.yml`) and release (`release.yml`) pipelines |

@@ -24,7 +24,7 @@ cd docker-environment-manager
 code .
 ```
 
-Click **"Reopen in Container"** when VS Code prompts you. This builds the toolchain (Docker CLI, PowerShell, ShellCheck) automatically no manual installs needed.
+Click **"Reopen in Container"** when VS Code prompts you. This builds the toolchain (Docker CLI, PowerShell, ShellCheck) automatically — no manual installs needed.
 
 > **Going manual instead?** Skip straight to step 3 as long as `docker`, `docker compose`, and `bash` (or `pwsh`) are already on your machine. See [`INSTALLATION.md`](INSTALLATION.md#manual-installation-without-dev-containers) for exact packages.
 
@@ -85,6 +85,6 @@ Every script accepts `-h` / `--help` for full options.
 
 - Swap the placeholder `demo` service in `docker/docker-compose.yml` for your real stack
 - Adjust `PROJECT_NAME`, `COMPOSE_FILE`, and `HEALTH_TIMEOUT` in `.env` — see [`INSTALLATION.md`](INSTALLATION.md#configuration)
-- Full flag reference for every script: [`INSTALLATION.md`](INSTALLATION.md#cli-reference)
-- Running on Windows without the Dev Container? See [`docs/powershell.MD`](docs/powershell.MD)
+- Full flag reference for every script: [`CLI_REFERENCE.md`](CLI_REFERENCE.md)
+- Running natively (no Dev Container)? See [`docs/BASH.md`](docs/BASH.md) for Linux/macOS/WSL, or [`docs/POWERSHELL.md`](docs/POWERSHELL.md) for Windows/PowerShell
 - Run the test suite: `tests/bash/*.bats` (Bats) and `tests/powershell/*.Tests.ps1` (Pester)
