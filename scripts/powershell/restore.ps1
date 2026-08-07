@@ -100,7 +100,6 @@ if (-not $AssumeYes) {
     }
 }
 
-$InputDir = (Resolve-Path (Split-Path -Parent $InputFile)).Path
 $InputName = Split-Path -Leaf $InputFile
 
 if ($CleanFlag) {
@@ -114,13 +113,36 @@ if ($CleanFlag) {
 }
 
 log_info "Restoring '$InputName' into volume '$Volume'"
-& docker run --rm `
-    -v "${Volume}:/volume" `
-    -v "${InputDir}:/backup:ro" `
-    alpine:3.20 `
-    tar xzf "/backup/$InputName" -C /volume
 
+# Copy the archive into a throwaway container with 'docker cp', then
+# extract it there. Unlike a host bind mount, docker cp is streamed over
+# the Docker API, so it works even when the Docker daemon doesn't share a
+# filesystem with this shell (e.g. Docker Outside of Docker in a
+# devcontainer/Codespace).
+$containerName = ("restore-$Volume-$(Get-Date -Format 'yyyyMMddHHmmss')" -replace '[^a-zA-Z0-9_.-]', '-')
+
+& docker create --name $containerName -v "${Volume}:/volume" alpine:3.20 `
+    tar xzf /tmp/archive.tar.gz -C /volume | Out-Null
 if ($LASTEXITCODE -ne 0) {
+    log_error "Failed to create restore container for '$Volume'"
+    exit 1
+}
+
+& docker cp $InputFile "${containerName}:/tmp/archive.tar.gz"
+$copyOk = ($LASTEXITCODE -eq 0)
+
+$restoreOk = $false
+if ($copyOk) {
+    & docker start -a $containerName
+    $restoreOk = ($LASTEXITCODE -eq 0)
+}
+else {
+    log_error "Failed to copy '$InputFile' into restore container"
+}
+
+& docker rm -f $containerName *> $null
+
+if (-not $restoreOk) {
     log_error "Failed to restore '$Volume' from $InputFile"
     exit 1
 }

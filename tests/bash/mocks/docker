@@ -1,0 +1,158 @@
+#!/usr/bin/env bash
+# Minimal stand-in for the `docker` CLI, used only by the Bats tests in
+# this folder so they can exercise script logic without a real Docker
+# daemon. Not a general-purpose Docker mock - it only implements the
+# handful of subcommands backup.sh / restore.sh / start.sh / stop.sh /
+# health.sh / logs.sh / cleanup.sh actually call.
+#
+# Env vars that steer its behavior:
+#   MOCK_DOCKER_LOG       - if set, every invocation is appended here
+#                            (one line, space-joined args) for assertions.
+#   MOCK_DOCKER_VOLUMES   - space-separated volume names that
+#                            `volume ls` / `volume inspect` should report
+#                            as existing.
+#
+# `docker run` note: backup.sh's actual workflow is
+#   docker run --rm -v VOL:/volume:ro -v HOSTDIR:/backup alpine \
+#     tar czf /backup/NAME.tar.gz -C /volume .
+# i.e. it relies on the container writing a real file back out through a
+# bind mount, not on `docker cp`. Since this mock never runs a real
+# container, the `run` case below parses those specific args (the `-v
+# HOSTDIR:/backup` mount and the `tar czf .../NAME` target) and drops a
+# dummy file at `HOSTDIR/NAME` itself, so callers can still assert the
+# archive landed.
+
+if [ -n "${MOCK_DOCKER_LOG:-}" ]; then
+  printf '%s\n' "$*" >> "$MOCK_DOCKER_LOG"
+fi
+
+cmd="${1:-}"; shift || true
+
+case "$cmd" in
+  info|version|login|logout)
+    exit 0
+    ;;
+
+  volume)
+    sub="${1:-}"; shift || true
+    case "$sub" in
+      ls)
+        for v in ${MOCK_DOCKER_VOLUMES:-}; do echo "$v"; done
+        exit 0
+        ;;
+      inspect)
+        vol="${1:-}"
+        for v in ${MOCK_DOCKER_VOLUMES:-}; do
+          if [ "$v" = "$vol" ]; then exit 0; fi
+        done
+        exit 1
+        ;;
+      create)
+        echo "${1:-mock-volume}"
+        exit 0
+        ;;
+      *)
+        exit 0
+        ;;
+    esac
+    ;;
+
+  compose)
+    action=""
+    for a in "$@"; do
+      case "$a" in
+        up|down|logs) action="$a" ;;
+        ps) [ -z "$action" ] && action="ps" ;;
+      esac
+    done
+    case "$action" in
+      up|down|logs)
+        exit 0
+        ;;
+      ps)
+        for a in "$@"; do
+          if [ "$a" = "--format" ]; then
+            echo "[]"
+            exit 0
+          fi
+        done
+        echo "NAME   STATUS"
+        echo "demo   Up (healthy)"
+        exit 0
+        ;;
+      *)
+        exit 0
+        ;;
+    esac
+    ;;
+
+  images|rmi|system)
+    exit 0
+    ;;
+
+  create)
+    echo "mock-container-id"
+    exit 0
+    ;;
+
+  start)
+    exit 0
+    ;;
+
+  cp)
+    # docker cp SRC DEST - if SRC looks like container:/path (copying OUT
+    # of a container), drop a small dummy file at DEST so callers can
+    # assert the archive/file actually landed.
+    src="${1:-}"; dest="${2:-}"
+    case "$src" in
+      *:*)
+        mkdir -p "$(dirname "$dest")" 2>/dev/null || true
+        printf 'mock archive contents' > "$dest"
+        ;;
+    esac
+    exit 0
+    ;;
+
+  rm)
+    exit 0
+    ;;
+
+  run)
+    # Look for a `-v HOSTDIR:/backup` mount and a `tar czf .../NAME` (or
+    # `tar xzf .../NAME`) target among the trailing container-command args,
+    # and materialize NAME under HOSTDIR. See header comment for why.
+    backup_host_dir=""
+    prev=""
+    for a in "$@"; do
+      if [ "$prev" = "-v" ]; then
+        case "$a" in
+          *:/backup|*:/backup:*)
+            backup_host_dir="${a%%:*}"
+            ;;
+        esac
+      fi
+      prev="$a"
+    done
+
+    archive_name=""
+    prev=""
+    for a in "$@"; do
+      case "$prev" in
+        czf|xzf)
+          archive_name="$(basename "$a")"
+          ;;
+      esac
+      prev="$a"
+    done
+
+    if [ -n "$backup_host_dir" ] && [ -n "$archive_name" ]; then
+      mkdir -p "$backup_host_dir" 2>/dev/null || true
+      printf 'mock archive contents' > "$backup_host_dir/$archive_name"
+    fi
+    exit 0
+    ;;
+
+  *)
+    exit 0
+    ;;
+esac

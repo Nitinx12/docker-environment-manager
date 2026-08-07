@@ -100,15 +100,36 @@ foreach ($volume in $Volumes) {
     }
 
     $archiveName = "$volume-$timestamp.tar.gz"
-    log_info "Backing up volume '$volume' -> $OutputDir/$archiveName"
+    $destPath = Join-Path $OutputDir $archiveName
+    log_info "Backing up volume '$volume' -> $destPath"
 
-    & docker run --rm `
-        -v "${volume}:/volume:ro" `
-        -v "${OutputDir}:/backup" `
-        alpine:3.20 `
-        tar czf "/backup/$archiveName" -C /volume .
+    # Write the archive inside a throwaway container first, then use
+    # 'docker cp' to pull it out. Unlike a host bind mount, docker cp is
+    # streamed over the Docker API, so it works even when the Docker
+    # daemon doesn't share a filesystem with this shell (e.g. Docker
+    # Outside of Docker in a devcontainer/Codespace).
+    $containerName = ("backup-$volume-$timestamp" -replace '[^a-zA-Z0-9_.-]', '-')
 
-    if ($LASTEXITCODE -eq 0) {
+    & docker create --name $containerName -v "${volume}:/volume:ro" alpine:3.20 `
+        tar czf /tmp/archive.tar.gz -C /volume . | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        log_error "Failed to create backup container for '$volume'"
+        $failures += 1
+        continue
+    }
+
+    & docker start -a $containerName | Out-Null
+    $tarOk = ($LASTEXITCODE -eq 0)
+
+    $copyOk = $false
+    if ($tarOk) {
+        & docker cp "${containerName}:/tmp/archive.tar.gz" $destPath
+        $copyOk = ($LASTEXITCODE -eq 0)
+    }
+
+    & docker rm -f $containerName *> $null
+
+    if ($tarOk -and $copyOk) {
         log_success "Backed up '$volume'"
     }
     else {
