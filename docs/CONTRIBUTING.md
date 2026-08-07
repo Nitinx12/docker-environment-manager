@@ -1,6 +1,6 @@
 # Contributing to Docker Environment Manager
 
-Thanks for taking the time to contribute. This project's core promise is that Bash and PowerShell users get an identical experience — that only holds if every change keeps both script sets in sync. This guide covers what that means in practice.
+Thanks for taking the time to contribute. This project's core promise is that Bash and PowerShell users get an identical experience that only holds if every change keeps both script sets in sync. This guide covers what that means in practice.
 
 ## Before You Start
 
@@ -31,7 +31,7 @@ Every script exists as both a `.sh` and a `.ps1` with the same flags, same defau
 | PowerShell-specific behavior/docs | [`docs/POWERSHELL.md`](docs/POWERSHELL.md) |
 | `.env` variables or config shape | [`INSTALLATION.md`](INSTALLATION.md) |
 
-A PR that changes only one language's script without the other will not be merged as-is — expect a review comment asking for the mirrored change.
+A PR that changes only one language's script without the other will not be merged as-is expect a review comment asking for the mirrored change.
 
 ## Making Changes
 
@@ -62,7 +62,7 @@ Invoke-ScriptAnalyzer -Path ./scripts/powershell -Recurse
 
 See [`docs/BASH.md#testing--linting`](docs/BASH.md#testing--linting) and [`docs/POWERSHELL.md#testing--linting`](docs/POWERSHELL.md#testing--linting) for details on what each check enforces.
 
-CI runs all of the above — ShellCheck + Bats for Bash, PSScriptAnalyzer + Pester for PowerShell — across a 3-OS matrix on every push. A PR won't be merged with failing checks.
+CI runs all of the above ShellCheck + Bats for Bash, PSScriptAnalyzer + Pester for PowerShell across a 3-OS matrix on every push. A PR won't be merged with failing checks.
 
 ## Commit Messages
 
