@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/Nitinx12/docker-environment-manager/actions/workflows/tests.yml/badge.svg)](https://github.com/Nitinx12/docker-environment-manager/actions/workflows/tests.yml)
 
-A cross-platform Docker Compose automation toolkit — the same start/stop/health/backup commands, with identical flags and behavior, whether your team is on Bash or PowerShell.
+A cross-platform Docker Compose automation toolkit the same start/stop/health/backup commands, with identical flags and behavior, whether your team is on Bash or PowerShell.
 
 ---
 
