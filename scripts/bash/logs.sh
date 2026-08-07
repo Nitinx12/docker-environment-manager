@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 #
-# logs.sh — View or tail logs for the Docker Compose stack.
+# health.sh — Report or wait for the health status of the Docker Compose stack.
 #
 # Usage:
-#   ./logs.sh [-f|--file <compose-file>] [-p|--project <name>] [-s|--service <name>] [-n|--tail <lines>] [--follow] [-h|--help] [SERVICE]
+#   ./health.sh [-f|--file <compose-file>] [-p|--project <name>] [-w|--wait] [-t|--timeout <seconds>] [-h|--help]
 #
+# Exits 0 if every container with a healthcheck is healthy (or none define
+# one). Exits 1 if any container is unhealthy, or if --wait times out while
+# containers are still starting. Intended as a standalone CI step after
+# start.sh, or for manual spot-checks.
 # Reads defaults from ../../.env (see .env.example), which can be overridden
 # by flags on the command line.
 
@@ -12,21 +16,20 @@ set -euo pipefail
 
 # ---- Load shared helpers ------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=./lib/common.sh
+# shellcheck source=SCRIPTDIR/lib/common.sh
 source "${SCRIPT_DIR}/lib/common.sh"
 
 usage() {
     cat <<EOF
-Usage: $(basename "$0") [OPTIONS] [SERVICE]
+Usage: $(basename "$0") [OPTIONS]
 
-View logs for the Docker Compose stack.
+Check (or wait for) the health status of the Docker Compose stack.
 
 Options:
   -f, --file <path>     Path to docker-compose file (default: from .env or docker/docker-compose.yml)
   -p, --project <name>  Compose project name (default: from .env or docker-env-manager)
-  -s, --service <name>  Only show logs for this service (can also be given positionally)
-      --follow          Stream logs continuously (like tail -f)
-  -n, --tail <lines>    Number of lines to show from the end (default: 100)
+  -w, --wait            Wait out containers still reporting "starting" instead of failing immediately
+  -t, --timeout <secs>  Max seconds to wait when --wait is set (default: 60)
   -h, --help            Show this help message
 EOF
 }
@@ -36,9 +39,8 @@ load_env
 
 COMPOSE_FILE="${COMPOSE_FILE:-docker/docker-compose.yml}"
 PROJECT_NAME="${PROJECT_NAME:-docker-env-manager}"
-SERVICE=""
-TAIL_LINES="100"
-FOLLOW_FLAG=""
+WAIT_FLAG=false
+TIMEOUT="${HEALTH_TIMEOUT:-60}"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -50,16 +52,12 @@ while [[ $# -gt 0 ]]; do
             PROJECT_NAME="$2"
             shift 2
             ;;
-        -s|--service)
-            SERVICE="$2"
-            shift 2
-            ;;
-        --follow)
-            FOLLOW_FLAG="--follow"
+        -w|--wait)
+            WAIT_FLAG=true
             shift
             ;;
-        -n|--tail)
-            TAIL_LINES="$2"
+        -t|--timeout)
+            TIMEOUT="$2"
             shift 2
             ;;
         -h|--help)
@@ -67,9 +65,9 @@ while [[ $# -gt 0 ]]; do
             exit 0
             ;;
         *)
-            # Allow a bare positional service name too: ./logs.sh airflow-scheduler
-            SERVICE="$1"
-            shift
+            log_error "Unknown option: $1"
+            usage
+            exit 1
             ;;
     esac
 done
@@ -88,7 +86,47 @@ if [[ ! -f "${COMPOSE_FILE}" ]]; then
     exit 1
 fi
 
-log_info "Showing logs for '${PROJECT_NAME}'${SERVICE:+ (service: ${SERVICE})}"
+# Prints "<unhealthy_count> <starting_count>". Containers with no
+# healthcheck defined report no "Health" field at all and are ignored.
+check_once() {
+    local ps_json unhealthy starting
+    ps_json="$(docker compose -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" ps --format json 2>/dev/null || true)"
+    unhealthy="$(grep -c '"Health":"unhealthy"' <<< "${ps_json}" || true)"
+    starting="$(grep -c '"Health":"starting"' <<< "${ps_json}" || true)"
+    echo "${unhealthy} ${starting}"
+}
 
-# shellcheck disable=SC2086
-docker compose -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" logs --tail "${TAIL_LINES}" ${FOLLOW_FLAG} ${SERVICE}
+log_info "Checking health for '${PROJECT_NAME}'"
+
+elapsed=0
+interval=3
+while true; do
+    read -r unhealthy starting < <(check_once)
+
+    if [[ "${unhealthy}" -gt 0 ]]; then
+        log_error "${unhealthy} container(s) unhealthy."
+        docker compose -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" ps
+        exit 1
+    fi
+
+    if [[ "${starting}" -eq 0 ]]; then
+        log_success "All containers are up and healthy."
+        docker compose -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" ps
+        exit 0
+    fi
+
+    if [[ "${WAIT_FLAG}" != true ]]; then
+        log_warn "${starting} container(s) still starting (use --wait to wait it out)."
+        docker compose -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" ps
+        exit 1
+    fi
+
+    if (( elapsed >= TIMEOUT )); then
+        log_error "Timed out after ${TIMEOUT}s waiting for healthy status."
+        docker compose -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" ps
+        exit 1
+    fi
+
+    sleep "${interval}"
+    elapsed=$((elapsed + interval))
+done
