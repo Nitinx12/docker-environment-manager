@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 #
-# backup.sh — Back up Docker named volumes to compressed tarballs.
+# cleanup.sh — Clean up Docker resources for this project (and optionally
+# the host).
 #
 # Usage:
-#   ./backup.sh [-p|--project <name>] [-v|--volume <name>]... [-o|--output <dir>] [-h|--help]
+#   ./cleanup.sh [-f|--file <compose-file>] [-p|--project <name>] [-a|--all] [-v|--volumes] [-n|--dry-run] [-h|--help]
 #
-# With no -v/--volume flags, backs up every volume Docker Compose tagged
-# with this project's label (com.docker.compose.project=<name>). Each
-# volume is streamed through a throwaway alpine container so no host
-# mount permissions are required.
-# Reads defaults from ../../.env (see .env.example), which can be overridden
-# by flags on the command line.
+# By default, only removes this project's stopped/orphaned containers and
+# dangling images. Use -a/--all for a broader host-wide
+# 'docker system prune'. Reads defaults from ../../.env (see .env.example),
+# which can be overridden by flags on the command line.
+# Mirrors scripts/powershell/cleanup.ps1.
 
 set -euo pipefail
 
@@ -23,12 +23,14 @@ usage() {
     cat <<EOF
 Usage: $(basename "$0") [OPTIONS]
 
-Back up Docker named volumes to timestamped .tar.gz archives.
+Clean up Docker resources.
 
 Options:
-  -p, --project <name>  Compose project name used to auto-discover volumes (default: from .env or docker-env-manager)
-  -v, --volume <name>   Back up a specific volume (repeatable). Overrides project auto-discovery.
-  -o, --output <dir>    Directory to write backups to (default: ./backups)
+  -f, --file <path>     Path to docker-compose file (default: from .env or docker/docker-compose.yml)
+  -p, --project <name>  Compose project name (default: from .env or docker-env-manager)
+  -a, --all             Also run a host-wide 'docker system prune' (images, build cache, networks)
+  -v, --volumes         Also remove this project's named volumes (DESTRUCTIVE)
+  -n, --dry-run         Show what would be removed without removing anything
   -h, --help            Show this help message
 EOF
 }
@@ -36,23 +38,33 @@ EOF
 # ---- Load config, then apply CLI overrides ------------------------------
 load_env
 
+COMPOSE_FILE="${COMPOSE_FILE:-docker/docker-compose.yml}"
 PROJECT_NAME="${PROJECT_NAME:-docker-env-manager}"
-OUTPUT_DIR="${BACKUP_DIR:-${REPO_ROOT}/backups}"
-VOLUMES=()
+ALL_FLAG=false
+VOLUMES_FLAG=false
+DRY_RUN=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        -f|--file)
+            COMPOSE_FILE="$2"
+            shift 2
+            ;;
         -p|--project)
             PROJECT_NAME="$2"
             shift 2
             ;;
-        -v|--volume)
-            VOLUMES+=("$2")
-            shift 2
+        -a|--all)
+            ALL_FLAG=true
+            shift
             ;;
-        -o|--output)
-            OUTPUT_DIR="$2"
-            shift 2
+        -v|--volumes)
+            VOLUMES_FLAG=true
+            shift
+            ;;
+        -n|--dry-run)
+            DRY_RUN=true
+            shift
             ;;
         -h|--help)
             usage
@@ -66,56 +78,68 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Resolve compose file relative to repo root if a relative path was given
+if [[ "${COMPOSE_FILE}" != /* ]]; then
+    COMPOSE_FILE="${REPO_ROOT}/${COMPOSE_FILE}"
+fi
+
 # ---- Preflight checks ----------------------------------------------------
 require_docker
 require_command docker
 
-if [[ "${OUTPUT_DIR}" != /* ]]; then
-    OUTPUT_DIR="${REPO_ROOT}/${OUTPUT_DIR}"
-fi
-mkdir -p "${OUTPUT_DIR}"
-
-# ---- Discover volumes if none were given explicitly -----------------------
-if [[ "${#VOLUMES[@]}" -eq 0 ]]; then
-    log_info "Discovering volumes for project '${PROJECT_NAME}'"
-    while IFS= read -r vol; do
-        [[ -n "${vol}" ]] && VOLUMES+=("${vol}")
-    done < <(docker volume ls -q -f "label=com.docker.compose.project=${PROJECT_NAME}")
+if [[ "${DRY_RUN}" == true ]]; then
+    log_warn "Dry run: no resources will be removed"
 fi
 
-if [[ "${#VOLUMES[@]}" -eq 0 ]]; then
-    log_error "No volumes found for project '${PROJECT_NAME}'. Use -v to specify one explicitly."
-    exit 1
-fi
-
-timestamp="$(date +%Y%m%d-%H%M%S)"
-failures=0
-
-for volume in "${VOLUMES[@]}"; do
-    if ! docker volume inspect "${volume}" >/dev/null 2>&1; then
-        log_error "Volume not found: ${volume}"
-        failures=$((failures + 1))
-        continue
-    fi
-
-    archive_name="${volume}-${timestamp}.tar.gz"
-    log_info "Backing up volume '${volume}' -> ${OUTPUT_DIR}/${archive_name}"
-
-    if docker run --rm \
-        -v "${volume}:/volume:ro" \
-        -v "${OUTPUT_DIR}:/backup" \
-        alpine:3.20 \
-        tar czf "/backup/${archive_name}" -C /volume .; then
-        log_success "Backed up '${volume}'"
+# ---- Project-scoped cleanup ------------------------------------------------
+if [[ -f "${COMPOSE_FILE}" ]]; then
+    log_info "Removing stopped/orphaned containers for project '${PROJECT_NAME}'"
+    if [[ "${DRY_RUN}" == true ]]; then
+        docker compose -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" ps -a
     else
-        log_error "Failed to back up '${volume}'"
-        failures=$((failures + 1))
+        down_args=(compose -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" down --remove-orphans)
+        if [[ "${VOLUMES_FLAG}" == true ]]; then
+            log_warn "Named volumes for '${PROJECT_NAME}' will be removed"
+            down_args+=(--volumes)
+        fi
+        docker "${down_args[@]}"
     fi
-done
-
-if [[ "${failures}" -gt 0 ]]; then
-    log_error "${failures} volume(s) failed to back up."
-    exit 1
+else
+    log_warn "Compose file not found: ${COMPOSE_FILE} - skipping project-scoped cleanup"
 fi
 
-log_success "All volumes backed up to ${OUTPUT_DIR}"
+log_info "Removing dangling images"
+dangling_ids=()
+while IFS= read -r id; do
+    [[ -n "${id}" ]] && dangling_ids+=("${id}")
+done < <(docker images -f "dangling=true" -q)
+
+if [[ "${#dangling_ids[@]}" -gt 0 ]]; then
+    if [[ "${DRY_RUN}" == true ]]; then
+        docker images -f "dangling=true"
+    else
+        if ! docker rmi "${dangling_ids[@]}" 2>/dev/null; then
+            log_warn "Some dangling images could not be removed (still in use)"
+        fi
+    fi
+else
+    log_info "No dangling images found"
+fi
+
+# ---- Host-wide cleanup ------------------------------------------------
+if [[ "${ALL_FLAG}" == true ]]; then
+    log_info "Running host-wide docker system prune"
+    prune_args=(--force)
+    if [[ "${VOLUMES_FLAG}" == true ]]; then
+        prune_args+=(--volumes)
+    fi
+
+    if [[ "${DRY_RUN}" == true ]]; then
+        log_info "(dry run) Would run: docker system prune ${prune_args[*]}"
+        docker system df
+    else
+        docker system prune "${prune_args[@]}"
+    fi
+fi
+
+log_success "Cleanup complete."
