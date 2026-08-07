@@ -4,7 +4,7 @@ services:
   demo:
     image: nginx:alpine
     ports:
-      - "8080:80"
+      - "8081:80"
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost"]
       interval: 5s
