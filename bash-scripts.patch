@@ -1,0 +1,104 @@
+diff --git a/scripts/bash/backup.sh b/scripts/bash/backup.sh
+index 4908dda..e9f7d78 100755
+--- a/scripts/bash/backup.sh
++++ b/scripts/bash/backup.sh
+@@ -16,7 +16,7 @@ set -euo pipefail
+ 
+ # ---- Load shared helpers ------------------------------------------------
+ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+-# shellcheck source=./lib/common.sh
++# shellcheck source=SCRIPTDIR/lib/common.sh
+ source "${SCRIPT_DIR}/lib/common.sh"
+ 
+ usage() {
+diff --git a/scripts/bash/cleanup.sh b/scripts/bash/cleanup.sh
+index 5070aa9..b19699c 100755
+--- a/scripts/bash/cleanup.sh
++++ b/scripts/bash/cleanup.sh
+@@ -14,7 +14,7 @@ set -euo pipefail
+ 
+ # ---- Load shared helpers ------------------------------------------------
+ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+-# shellcheck source=./lib/common.sh
++# shellcheck source=SCRIPTDIR/lib/common.sh
+ source "${SCRIPT_DIR}/lib/common.sh"
+ 
+ usage() {
+diff --git a/scripts/bash/health.sh b/scripts/bash/health.sh
+index 6a21db6..8e5a639 100755
+--- a/scripts/bash/health.sh
++++ b/scripts/bash/health.sh
+@@ -16,7 +16,7 @@ set -euo pipefail
+ 
+ # ---- Load shared helpers ------------------------------------------------
+ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+-# shellcheck source=./lib/common.sh
++# shellcheck source=SCRIPTDIR/lib/common.sh
+ source "${SCRIPT_DIR}/lib/common.sh"
+ 
+ usage() {
+diff --git a/scripts/bash/logs.sh b/scripts/bash/logs.sh
+index 7eee6ae..39fb859 100755
+--- a/scripts/bash/logs.sh
++++ b/scripts/bash/logs.sh
+@@ -12,7 +12,7 @@ set -euo pipefail
+ 
+ # ---- Load shared helpers ------------------------------------------------
+ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+-# shellcheck source=./lib/common.sh
++# shellcheck source=SCRIPTDIR/lib/common.sh
+ source "${SCRIPT_DIR}/lib/common.sh"
+ 
+ usage() {
+diff --git a/scripts/bash/restart.sh b/scripts/bash/restart.sh
+index 936d119..c4ce98e 100755
+--- a/scripts/bash/restart.sh
++++ b/scripts/bash/restart.sh
+@@ -13,7 +13,7 @@ set -euo pipefail
+ 
+ # ---- Load shared helpers ------------------------------------------------
+ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+-# shellcheck source=./lib/common.sh
++# shellcheck source=SCRIPTDIR/lib/common.sh
+ source "${SCRIPT_DIR}/lib/common.sh"
+ 
+ usage() {
+diff --git a/scripts/bash/restore.sh b/scripts/bash/restore.sh
+index dfe7195..a3992a8 100755
+--- a/scripts/bash/restore.sh
++++ b/scripts/bash/restore.sh
+@@ -12,7 +12,7 @@ set -euo pipefail
+ 
+ # ---- Load shared helpers ------------------------------------------------
+ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+-# shellcheck source=./lib/common.sh
++# shellcheck source=SCRIPTDIR/lib/common.sh
+ source "${SCRIPT_DIR}/lib/common.sh"
+ 
+ usage() {
+diff --git a/scripts/bash/start.sh b/scripts/bash/start.sh
+index 91325d0..3874d66 100755
+--- a/scripts/bash/start.sh
++++ b/scripts/bash/start.sh
+@@ -12,7 +12,7 @@ set -euo pipefail
+ 
+ # ---- Load shared helpers ------------------------------------------------
+ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+-# shellcheck source=./lib/common.sh
++# shellcheck source=SCRIPTDIR/lib/common.sh
+ source "${SCRIPT_DIR}/lib/common.sh"
+ 
+ usage() {
+diff --git a/scripts/bash/stop.sh b/scripts/bash/stop.sh
+index 2df1574..d8e58a1 100755
+--- a/scripts/bash/stop.sh
++++ b/scripts/bash/stop.sh
+@@ -12,7 +12,7 @@ set -euo pipefail
+ 
+ # ---- Load shared helpers ------------------------------------------------
+ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+-# shellcheck source=./lib/common.sh
++# shellcheck source=SCRIPTDIR/lib/common.sh
+ source "${SCRIPT_DIR}/lib/common.sh"
+ 
+ usage() {

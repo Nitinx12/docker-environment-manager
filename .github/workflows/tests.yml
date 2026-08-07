@@ -39,8 +39,8 @@ jobs:
 
       - name: Run ShellCheck
         run: |
-          shellcheck scripts/bash/*.sh
-          shellcheck scripts/bash/lib/*.sh
+          shellcheck -x scripts/bash/*.sh
+          shellcheck -x scripts/bash/lib/*.sh
 
       - name: Run Bats tests
         run: bats tests/bash
@@ -57,6 +57,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Make Docker mock executable
+        if: runner.os != 'Windows'
+        shell: bash
+        run: chmod +x tests/powershell/mocks/docker
 
       - name: Install Pester
         shell: pwsh
