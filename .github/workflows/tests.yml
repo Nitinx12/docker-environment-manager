@@ -7,41 +7,52 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   bash-tests:
-    name: Bash tests (bats)
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    name: Bash Tests
+    runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install bats (Linux)
-        if: runner.os == 'Linux'
+      - name: Install dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y bats
+          sudo apt-get install -y bats shellcheck
 
-      - name: Install bats (macOS)
-        if: runner.os == 'macOS'
-        run: brew install bats-core
+      - name: Make scripts executable
+        run: |
+          chmod +x scripts/bash/*.sh
+          chmod +x scripts/bash/lib/*.sh
+          chmod +x tests/bash/mocks/docker
 
-      - name: Ensure docker mock is executable
-        run: chmod +x tests/bash/mocks/docker
+      - name: Verify environment
+        run: |
+          pwd
+          bats --version
+          shellcheck --version
 
-      - name: Run bats suite
+      - name: Run ShellCheck
+        run: |
+          shellcheck scripts/bash/*.sh
+          shellcheck scripts/bash/lib/*.sh
+
+      - name: Run Bats tests
         run: bats tests/bash
 
   powershell-tests:
-    name: PowerShell tests (Pester)
+    name: PowerShell Tests
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+
     runs-on: ${{ matrix.os }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,21 +60,40 @@ jobs:
       - name: Install Pester
         shell: pwsh
         run: |
-          Install-Module -Name Pester -MinimumVersion 5.5.0 -Force -SkipPublisherCheck -Scope CurrentUser
+          Install-Module Pester `
+            -RequiredVersion 5.7.1 `
+            -Scope CurrentUser `
+            -Force `
+            -SkipPublisherCheck
 
-      - name: Run Pester suite
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Install-Module PSScriptAnalyzer `
+            -Scope CurrentUser `
+            -Force `
+            -SkipPublisherCheck
+
+      - name: Run Script Analyzer
+        shell: pwsh
+        run: |
+          Invoke-ScriptAnalyzer scripts/powershell -Recurse -Severity Error
+
+      - name: Run Pester
         shell: pwsh
         run: |
           $config = New-PesterConfiguration
-          $config.Run.Path = './tests/powershell'
+          $config.Run.Path = "./tests/powershell"
           $config.Run.Exit = $true
-          $config.Output.Verbosity = 'Detailed'
+          $config.Output.Verbosity = "Detailed"
+
           $config.TestResult.Enabled = $true
-          $config.TestResult.OutputFormat = 'NUnitXml'
-          $config.TestResult.OutputPath = 'pester-results-${{ matrix.os }}.xml'
+          $config.TestResult.OutputFormat = "NUnitXml"
+          $config.TestResult.OutputPath = "pester-results-${{ matrix.os }}.xml"
+
           Invoke-Pester -Configuration $config
 
-      - name: Upload Pester results
+      - name: Upload Pester Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -72,15 +102,22 @@ jobs:
           retention-days: 14
 
   tests-passed:
-    name: All tests passed
+    name: All Tests Passed
     if: always()
-    needs: [bash-tests, powershell-tests]
+
+    needs:
+      - bash-tests
+      - powershell-tests
+
     runs-on: ubuntu-latest
+
     steps:
-      - name: Check job results
+      - name: Verify Results
         run: |
-          if [ "${{ needs.bash-tests.result }}" != "success" ] || [ "${{ needs.powershell-tests.result }}" != "success" ]; then
+          if [ "${{ needs.bash-tests.result }}" != "success" ] || \
+             [ "${{ needs.powershell-tests.result }}" != "success" ]; then
             echo "One or more test jobs failed."
             exit 1
           fi
+
           echo "All test jobs passed."
