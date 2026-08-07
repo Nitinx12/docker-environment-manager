@@ -10,9 +10,9 @@ A cross-platform Docker Compose automation toolkit — the same start/stop/healt
 
 Most teams end up with Docker lifecycle tooling that only works for some of them:
 
-- **Compose commands get long and easy to get wrong.** `docker compose -f docker/docker-compose.yml -p myproject up -d --build` is not something anyone wants to type — or remember — correctly every time, across every service.
+- **Compose commands get long and easy to get wrong.** `docker compose -f docker/docker-compose.yml -p myproject up -d --build` is not something anyone wants to type or remember correctly every time, across every service.
 - **"Works on my machine" setup.** A Bash script in `scripts/` works great for the Linux/macOS half of the team and silently doesn't exist for whoever's on native Windows, so Windows contributors end up with their own one-off `.ps1` files that drift out of sync with the "real" ones over time.
-- **No standard way to know if the stack is actually healthy**, back up a volume before a risky change, or restore one after something goes wrong — so everyone reaches for `docker` directly, inconsistently, under pressure.
+- **No standard way to know if the stack is actually healthy**, back up a volume before a risky change, or restore one after something goes wrong so everyone reaches for `docker` directly, inconsistently, under pressure.
 - **Onboarding a new machine means manually installing the right shell, Docker, and linters** in the right versions before anyone can run anything.
 
 None of this is hard individually. It's just tedious, easy to get subtly wrong, and different enough per developer that debugging someone else's environment issue becomes its own project.
