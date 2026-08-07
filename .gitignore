@@ -66,3 +66,12 @@ reports/
 # Dev Containers
 # ===========================
 .devcontainer/devcontainer-lock.json
+
+# ===========================
+# assets
+# Ignore everything under assets/, except the header logo used in the README
+# ===========================
+assets/*
+!assets/logos
+assets/logos/*
+!assets/logos/docker-logo.png
