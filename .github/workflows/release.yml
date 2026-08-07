@@ -1,0 +1,68 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v1.2.3). Only needed if not running from a tag ref."
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  tests:
+    name: Run Tests
+    uses: ./.github/workflows/tests.yml
+
+  release:
+    name: Create Release
+    needs: tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Determine release tag
+        id: version
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            TAG="${{ github.ref_name }}"
+          elif [ -n "${{ inputs.tag }}" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            echo "No tag found. Push a tag matching v*.*.* or supply the 'tag' input." >&2
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Make scripts executable
+        run: |
+          chmod +x scripts/bash/*.sh
+          chmod +x scripts/bash/lib/*.sh
+
+      - name: Package release assets
+        run: |
+          mkdir -p dist
+          TAG="${{ steps.version.outputs.tag }}"
+
+          tar -czf "dist/scripts-bash-${TAG}.tar.gz" -C scripts bash
+          zip -rq "dist/scripts-powershell-${TAG}.zip" scripts/powershell
+
+          ( cd dist && sha256sum *.tar.gz *.zip > "checksums-${TAG}.txt" )
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          generate_release_notes: true
+          files: |
+            dist/scripts-bash-${{ steps.version.outputs.tag }}.tar.gz
+            dist/scripts-powershell-${{ steps.version.outputs.tag }}.zip
+            dist/checksums-${{ steps.version.outputs.tag }}.txt
