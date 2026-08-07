@@ -24,7 +24,7 @@ cd docker-environment-manager
 code .
 ```
 
-Click **"Reopen in Container"** when VS Code prompts you. This builds the toolchain (Docker CLI, PowerShell, ShellCheck) automatically — no manual installs needed.
+Click **"Reopen in Container"** when VS Code prompts you. This builds the toolchain (Docker CLI, PowerShell, ShellCheck) automatically no manual installs needed.
 
 > **Going manual instead?** Skip straight to step 3 as long as `docker`, `docker compose`, and `bash` (or `pwsh`) are already on your machine. See [`INSTALLATION.md`](INSTALLATION.md#manual-installation-without-dev-containers) for exact packages.
 
