@@ -70,6 +70,16 @@ Never mark a task complete with a failing test. If a test fails and the
 failure looks like an outdated test rather than a real bug, fix the test
 in the same commit and say so explicitly — don't silently loosen it.
 
+## Branching workflow
+
+<!-- Agents never commit straight to main. Own branch, own tests, own merge. -->
+
+For any change: create a new branch off `main`, make the edits there, run
+the matching test suite(s) from the rule above, and only merge that branch
+back into `main` once every test passes. Coding agents (Codex and similar)
+must work exclusively on branches they create themselves — never directly
+on `main`.
+
 ## Conventions to preserve
 
 <!-- These are load-bearing design decisions from ARCHITECTURE.md. -->
